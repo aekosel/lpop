@@ -5,12 +5,16 @@
 ######################################################################
 
 #############################
-###load libraries and data###
+###load libraries         ###
 #############################
 require(shiny)
 require(KernSmooth)
 require(nlme)
-dat = read.csv("simulated_data.csv")
+if( is.null(names(lpop.data)) ){
+  cat("ERROR: lpop.data needs to be set prior to executing the server.\n")
+}else{
+  dat <- lpop.data
+}
 
 
 ###################################
@@ -38,9 +42,9 @@ make.box <- function(my.point, n, X, Y, beta.hat=rep(1, 2)){
 
 	keep = as.logical( d.supnorm <= (max.d + 1e-14) )
 	m = sum(keep)
-	if( m==n ){
+	if( (m==n) ){
 		in.box.supnorm = sort( order(d.supnorm)[1:n] )
-	} else {
+	}else{
 		keep = d.supnorm <= (max.d + 1e-14)
 		m = sum(keep)
 		in.box.supnorm = sort( order(d.supnorm)[1:m] )
@@ -83,7 +87,7 @@ make.box <- function(my.point, n, X, Y, beta.hat=rep(1, 2)){
 ###code to plot the box###
 ##########################
 plot.box <- function(my.point, n, X, Y, beta.hat=rep(1,2),
-	plot.supnorm = T, x1.l=c(0,1), x2.l=c(0,1)){
+	plot.supnorm=T, x1.l=c(0,1), x2.l=c(0,1)){
 	#obtain the neighborhood
 	out = make.box(my.point, n, X, Y, beta.hat)
 
@@ -102,7 +106,7 @@ plot.box <- function(my.point, n, X, Y, beta.hat=rep(1,2),
 	points(X[ , 1], X[ , 2], pch=19)
 
 	#display the neighborhood
-	if(plot.supnorm == T){
+	if( (plot.supnorm==T) ){
 		in.box.supnorm = out$in.box
 		box.corners.supnorm = out$box.corners
 		polygon(c(box.corners.supnorm[1:2], box.corners.supnorm[2:1]),
@@ -166,18 +170,16 @@ shinyServer(function(input, output) {
 		Xv = Xv[all.cc==T, ]
 		Yv = Yv[all.cc==T]
 
-	if(input$scaled == "No"){
+	if( (input$scaled=="No") ){
 		my.box.vals = make.box(c(input$my.point.x1, input$my.point.x2), input$n, Xv, Yv, beta.hat=rep(1,2))
-	}
-	else if(input$scaled == "Globally"){
+	}else{ if( (input$scaled=="Globally") ){
 		my.beta.hat = rep(1,2)
 		my.beta.hat[1] = solve(crossprod(cbind(rep(1,length(Yv)), Xv[ , 1])),
 			crossprod(cbind(rep(1,length(Yv)), Xv[ , 1]), Yv) )[2]
 		my.beta.hat[2] = solve(crossprod(cbind(rep(1,length(Yv)), Xv[ , 2])),
 			crossprod(cbind(rep(1,length(Yv)), Xv[ , 2]), Yv) )[2]
 		my.box.vals = make.box(c(input$my.point.x1, input$my.point.x2), input$n, Xv, Yv, my.beta.hat)
-    }
-	else{
+    }else{
 		my.beta.hat = rep(1,2)
 		my.band.1 = dpill(Xv[, 1], Yv)
 		beta.est1 = locpoly(Xv[, 1], Yv, drv=1, degree=2, bandwidth=my.band.1)
@@ -186,7 +188,8 @@ shinyServer(function(input, output) {
 		beta.est2 = locpoly(Xv[, 2], Yv, drv=1, degree=2, bandwidth=my.band.2)
 		my.beta.hat[2] = beta.est2$y[which(abs(beta.est2$x-input$my.point.x2) == min(abs(beta.est2$x-input$my.point.x2)))]
 		my.box.vals = make.box(c(input$my.point.x1, input$my.point.x2), input$n, Xv, Yv, my.beta.hat)
-	}
+	} 
+     }
     
     #set up the plot window
 	plot(input$my.point.x1, input$my.point.x2,
@@ -223,18 +226,16 @@ shinyServer(function(input, output) {
 		Xv = Xv[all.cc==T, ]
 		Yv = Yv[all.cc==T]
 
-	if(input$scaled == "No"){
+	if( (input$scaled=="No") ){
 		my.box.vals = make.box(c(input$my.point.x1, input$my.point.x2), input$n, Xv, Yv, beta.hat=rep(1,2))
-	}
-	else if(input$scaled == "Globally"){
+	}else{ if( (input$scaled=="Globally") ){
 		my.beta.hat = rep(1,2)
 		my.beta.hat[1] = solve(crossprod(cbind(rep(1,length(Yv)), Xv[ , 1])),
 			crossprod(cbind(rep(1,length(Yv)), Xv[ , 1]), Yv) )[2]
 		my.beta.hat[2] = solve(crossprod(cbind(rep(1,length(Yv)), Xv[ , 2])),
 			crossprod(cbind(rep(1,length(Yv)), Xv[ , 2]), Yv) )[2]
 		my.box.vals = make.box(c(input$my.point.x1, input$my.point.x2), input$n, Xv, Yv, my.beta.hat)
-	}
-	else{
+	}else{
 		my.beta.hat = rep(1,2)
 		my.band.1 = dpill(Xv[, 1], Yv)
 		beta.est1 = locpoly(Xv[, 1], Yv, drv=1, degree=2, bandwidth=my.band.1)
@@ -243,7 +244,8 @@ shinyServer(function(input, output) {
 		beta.est2 = locpoly(Xv[, 2], Yv, drv=1, degree=2, bandwidth=my.band.2)
 		my.beta.hat[2] = beta.est2$y[which(abs(beta.est2$x-input$my.point.x2) == min(abs(beta.est2$x-input$my.point.x2)))]
 		my.box.vals = make.box(c(input$my.point.x1, input$my.point.x2), input$n, Xv, Yv, my.beta.hat)
-	}
+	  }
+  	}
 	ib.m = quantile(Yv[my.box.vals$in.box], input$histquant/100)
 
 	#plot the histogram
@@ -303,18 +305,16 @@ shinyServer(function(input, output) {
 	Yv = Yv[all.cc==T]
 
 	#calculate means and errors
-	if(input$scaled == "No"){
+	if( (input$scaled=="No") ){
 		my.box.vals = make.box(c(input$my.point.x1, input$my.point.x2), input$n, Xv, Yv, beta.hat=rep(1,2))
-	}
-	else if(input$scaled == "Globally"){
+	}else{ if( (input$scaled=="Globally") ){
 		my.beta.hat = rep(1,2)
 		my.beta.hat[1] = solve(crossprod(cbind(rep(1,length(Yv)), Xv[ , 1])),
 			crossprod(cbind(rep(1,length(Yv)), Xv[ , 1]), Yv) )[2]
 		my.beta.hat[2] = solve(crossprod(cbind(rep(1,length(Yv)), Xv[ , 2])),
 			crossprod(cbind(rep(1,length(Yv)), Xv[ , 2]), Yv) )[2]
 		my.box.vals = make.box(c(input$my.point.x1, input$my.point.x2), input$n, Xv, Yv, my.beta.hat)
-	}
-	else{
+	}else{
 		my.beta.hat = rep(1,2)
 		my.band.1 = dpill(Xv[, 1], Yv)
 		beta.est1 = locpoly(Xv[, 1], Yv, drv=1, degree=2, bandwidth=my.band.1)
@@ -323,7 +323,8 @@ shinyServer(function(input, output) {
 		beta.est2 = locpoly(Xv[, 2], Yv, drv=1, degree=2, bandwidth=my.band.2)
 		my.beta.hat[2] = beta.est2$y[which(abs(beta.est2$x-input$my.point.x2) == min(abs(beta.est2$x-input$my.point.x2)))]
 		my.box.vals = make.box(c(input$my.point.x1, input$my.point.x2), input$n, Xv, Yv, my.beta.hat)
-	}
+	  }
+  	}
 	ib.m = mean(Yv[my.box.vals$in.box])
 	ib.se = sd(Yv[my.box.vals$in.box])/input$n
 	o.m = mean(Yv)
@@ -347,18 +348,16 @@ shinyServer(function(input, output) {
 	Yv = Yv[all.cc==T]
 
 	#calculate means and errors
-	if(input$scaled == "No"){
+	if( (input$scaled=="No") ){
 		my.box.vals = make.box(c(input$my.point.x1, input$my.point.x2), input$n, Xv, Yv, beta.hat=rep(1,2))
-	}
-	else if(input$scaled == "Globally"){
+	}else{ if( (input$scaled=="Globally") ){
 		my.beta.hat = rep(1,2)
 		my.beta.hat[1] = solve(crossprod(cbind(rep(1,length(Yv)), Xv[ , 1])),
 			crossprod(cbind(rep(1,length(Yv)), Xv[ , 1]), Yv) )[2]
 		my.beta.hat[2] = solve(crossprod(cbind(rep(1,length(Yv)), Xv[ , 2])),
 			crossprod(cbind(rep(1,length(Yv)), Xv[ , 2]), Yv) )[2]
 		my.box.vals = make.box(c(input$my.point.x1, input$my.point.x2), input$n, Xv, Yv, my.beta.hat)
-	}
-	else{
+	}else{
 		my.beta.hat = rep(1,2)
 		my.band.1 = dpill(Xv[, 1], Yv)
 		beta.est1 = locpoly(Xv[, 1], Yv, drv=1, degree=2, bandwidth=my.band.1)
@@ -367,6 +366,7 @@ shinyServer(function(input, output) {
 		beta.est2 = locpoly(Xv[, 2], Yv, drv=1, degree=2, bandwidth=my.band.2)
 		my.beta.hat[2] = beta.est2$y[which(abs(beta.est2$x-input$my.point.x2) == min(abs(beta.est2$x-input$my.point.x2)))]
 		my.box.vals = make.box(c(input$my.point.x1, input$my.point.x2), input$n, Xv, Yv, my.beta.hat)
+	  }
 	}
 	ib.quant = quantile(Yv[my.box.vals$in.box], c(.25, .5, .75))
 	o.quant = quantile(Yv, c(.25, .5, .75))
@@ -385,18 +385,16 @@ shinyServer(function(input, output) {
 	all.cc = complete.cases(Xv, Yv)
 	Xv = Xv[all.cc==T, ]
 	Yv = Yv[all.cc==T]
-	if(input$scaled == "No"){
+	if( (input$scaled=="No") ){
 		my.box.vals = make.box(c(input$my.point.x1, input$my.point.x2), input$n, Xv, Yv, beta.hat=rep(1,2))
-	}
-	else if(input$scaled == "Globally"){
+	}else{ if( (input$scaled=="Globally")){
 		my.beta.hat = rep(1,2)
 		my.beta.hat[1] = solve(crossprod(cbind(rep(1,length(Yv)), Xv[ , 1])),
 			crossprod(cbind(rep(1,length(Yv)), Xv[ , 1]), Yv) )[2]
 		my.beta.hat[2] = solve(crossprod(cbind(rep(1,length(Yv)), Xv[ , 2])),
 			crossprod(cbind(rep(1,length(Yv)), Xv[ , 2]), Yv) )[2]
 		my.box.vals = make.box(c(input$my.point.x1, input$my.point.x2), input$n, Xv, Yv, my.beta.hat)
-	}
-	else{
+	}else{
 		my.beta.hat = rep(1,2)
 		my.band.1 = dpill(Xv[, 1], Yv)
 		beta.est1 = locpoly(Xv[, 1], Yv, drv=1, degree=2, bandwidth=my.band.1)
@@ -405,6 +403,7 @@ shinyServer(function(input, output) {
 		beta.est2 = locpoly(Xv[, 2], Yv, drv=1, degree=2, bandwidth=my.band.2)
 		my.beta.hat[2] = beta.est2$y[which(abs(beta.est2$x-input$my.point.x2) == min(abs(beta.est2$x-input$my.point.x2)))]
 		my.box.vals = make.box(c(input$my.point.x1, input$my.point.x2), input$n, Xv, Yv, my.beta.hat)
+	  }
 	}
 	my.data = data.frame( cbind(c(my.box.vals$box.corners[1],my.box.vals$box.corners[3]),
 		c(my.box.vals$box.corners[2],my.box.vals$box.corners[4])),
@@ -424,16 +423,14 @@ shinyServer(function(input, output) {
 	all.cc = complete.cases(Xv, Yv)
 	Xv = Xv[all.cc==T, ]
 	Yv = Yv[all.cc==T]
-	if(input$scaled == "No"){
+	if( (input$scaled=="No") ){
 		my.box.vals = make.box(c(input$my.point.x1, input$my.point.x2), input$n, Xv, Yv, beta.hat=rep(1,2))
-	}
-	else if(input$scaled == "Globally"){
+	}else{ if( (input$scaled=="Globally") ){
 		my.beta.hat = rep(1,2)
 		my.beta.hat[1] = solve(crossprod(cbind(rep(1,length(Yv)), Xv[ , 1])), crossprod(cbind(rep(1,length(Yv)), Xv[ , 1]), Yv) )[2]
 		my.beta.hat[2] = solve(crossprod(cbind(rep(1,length(Yv)), Xv[ , 2])), crossprod(cbind(rep(1,length(Yv)), Xv[ , 2]), Yv) )[2]
 		my.box.vals = make.box(c(input$my.point.x1, input$my.point.x2), input$n, Xv, Yv, my.beta.hat)
-	}
-	else{
+	}else{
 		my.beta.hat = rep(1,2)
 		my.band.1 = dpill(Xv[, 1], Yv)
 		beta.est1 = locpoly(Xv[, 1], Yv, drv=1, degree=2, bandwidth=my.band.1)
@@ -442,6 +439,7 @@ shinyServer(function(input, output) {
 		beta.est2 = locpoly(Xv[, 2], Yv, drv=1, degree=2, bandwidth=my.band.2)
 		my.beta.hat[2] = beta.est2$y[which(abs(beta.est2$x-input$my.point.x2) == min(abs(beta.est2$x-input$my.point.x2)))]
 		my.box.vals = make.box(c(input$my.point.x1, input$my.point.x2), input$n, Xv, Yv, my.beta.hat)
+	  }
 	}
 	pts.keep = length(my.box.vals$in.box)
 
